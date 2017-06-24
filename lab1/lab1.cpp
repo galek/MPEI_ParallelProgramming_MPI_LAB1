@@ -1,20 +1,21 @@
 // lab1.cpp: определяет точку входа для консольного приложения.
 //
 
-#include "stdafx.h"
+//#include "stdafx.h"
 
 #include "mpi.h"
 #include <stdio.h>
 #include <stdlib.h>
 //#include <sys/time.h>
-#include <time.h>
-#include <iostream>
-#include "windows.h"
+//#include <time.h>
+//#include <iostream>
 
 #define	NUMBER_REPS	1000
 
+#if _MSC_VER
 #pragma comment(lib, "msmpi.lib")
-#pragma comment(lib, "Ws2_32.lib")
+//#pragma comment(lib, "Ws2_32.lib")
+#endif
 
 
 /*
@@ -180,7 +181,8 @@ int main(int argc, char*argv[])
 
 		{
 			auto sumTOneWay = sumT;
-			sumTOneWay /= 2.0* (numtasks - 1)*reps;
+			/*sumTOneWay /= 2.0* (numtasks - 1)*reps;*/
+			sumTOneWay /= 2;
 			printf("Latency of channel is %2.8f seconds (One way %2.8f seconds), found in %d iterations\n", sumT, /*sumT / 2*/sumTOneWay, reps);
 		}
 		//avgT = (sumT * 1000000) / reps;
