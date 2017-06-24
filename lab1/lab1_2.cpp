@@ -24,17 +24,16 @@
 
 /*
 1.	Измерение латентности и пропускной способности каналов обмена данными при использовании функций MPI. Задачи:
-1.	Вычислить латентность и пропускную способность при передаче данных с помощью функций MPI_Send/MPI_Recv. Учесть, что обмен при выполнении программы может на самом деле происходить как между процессорами одного хоста, так и между хостами.
-2.	Сравнить производительность функций MPI_Bcast и MPI_Send/MPI_Recv при разном количестве задействованных узлов.
-3.	Сравнить производительность функций MPI_Reduce и MPI_Send/MPI_Recv при разном количестве задействованных узлов.
+1.	Вычислить пропускную способность
 */
 
 namespace Benchmarking_1
 {
-	void func(int reps, int size, int bytessize, int rank, MPI_Status& status)
+	void Task_1_1_2(int reps, int size, int MBSize, int rank, MPI_Status& status)
 	{
 		double sumT = 0;
 
+		int bytessize = MBSize * 1024 * 1024;
 		char* msg = new char[bytessize];
 
 
@@ -90,18 +89,19 @@ namespace Benchmarking_1
 			}
 		}
 	}
+
+	void BenchmarkCapacity(int MBSize, int CapacityReps, double &TimeDelta, int size, int rank, MPI_Status& status)
+	{
+		for (int i = 1; i <= 8; i++) {
+			auto TimeStart = MPI_Wtime();
+			Task_1_1_2(CapacityReps, size, MBSize*i, rank, status);
+			TimeDelta = MPI_Wtime() - TimeStart;
+		}
+	}
 }
 
 int main(int argc, char*argv[])
 {
-	//int _len;
-	//if (sscanf(argv[0], "%i", &_len) != 1) {
-	//	fprintf(stderr, "error - not an integer");
-	//	return 1;
-	//}
-
-
-
 	int 		tag,                    /* MPI message tag parameter */
 
 		size,               /* number of MPI tasks */
@@ -129,19 +129,14 @@ int main(int argc, char*argv[])
 
 	sumT = 0;
 	tag = 1;
-
-	int CapacityReps = 10;/*Количество измерений*/
-	int MBSize = 1; /*Размер МБ*/
-	int CapacityDataSize = MBSize * 1024 * 1024;
-
-	double TimeStart = 0;
+	
 	double TimeDelta = 0;
 
 	printf("Capacity checking Started \n");
-	for (int i = 1; i <= 8; i++) {
-		TimeStart = MPI_Wtime();
-		Benchmarking_1::func(CapacityReps, size, CapacityDataSize*i, rank, status);
-		TimeDelta = MPI_Wtime() - TimeStart;
+
+	{
+		using namespace Benchmarking_1;
+		BenchmarkCapacity(1/*Размер МБ*/, 10/*Количество измерений*/, TimeDelta, size, rank, status);
 	}
 
 	if (rank == 0)
