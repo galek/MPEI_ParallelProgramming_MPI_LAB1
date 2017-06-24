@@ -41,7 +41,7 @@ namespace Benchmarking_1
 
 			for (auto i = 1; i <= reps; i++)
 			{
-				for (auto i = 0; i < numtasks; i++)
+				for (auto j = 1; j < numtasks; j++)
 				{
 					auto _startTime = MPI_Wtime();     /* start time */
 													   /* send message to worker - message tag set to 1.  */
@@ -70,6 +70,10 @@ namespace Benchmarking_1
 
 													 /* calculate round trip time and print */
 					auto deltaT = _endTime - _startTime;
+					{
+						//deltaT /= CLOCKS_PER_SEC; // To Milliseconds; 1 microsecond=0,001ms
+					}
+
 					printf("%4d  %8.8f  %8.8f  %2.8f\n", i, _startTime, _endTime, deltaT);
 					sumT += deltaT;
 				}
@@ -88,7 +92,7 @@ namespace Benchmarking_1
 
 			for (auto i = 1; i <= reps; i++)
 			{
-				for (auto i = 0; i < numtasks; i++) 
+				for (auto j = 1; j < numtasks; j++)
 				{
 					rc = MPI_Recv(&msg, 1, MPI_BYTE, source, tag, MPI_COMM_WORLD, &status);
 
@@ -168,11 +172,17 @@ int main(int argc, char*argv[])
 
 	Benchmarking_1::func(rank, dest, source, reps, rc, sumT, avgT, msg, status, tag, numtasks);
 
+
 	if (rank == 0) {
-		printf("\n TASK FINISHED \r\n");
+		//printf("\n TASK FINISHED \r\n");
 
-		printf("Latency of channel is %2.8f seconds, found in %d iterations\n", sumT, reps);
+		// “ут расчет - в 2 конца
 
+		{
+			auto sumTOneWay = sumT;
+			sumTOneWay /= 2.0* (numtasks - 1)*reps;
+			printf("Latency of channel is %2.8f seconds (One way %2.8f seconds), found in %d iterations\n", sumT, /*sumT / 2*/sumTOneWay, reps);
+		}
 		//avgT = (sumT * 1000000) / reps;
 		//printf("***************************************************\n");
 		//printf("\n*** Avg round trip time = %d microseconds\n", avgT);
