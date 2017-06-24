@@ -130,8 +130,9 @@ int main(int argc, char*argv[])
 	sumT = 0;
 	tag = 1;
 
-	int CapacityReps = 50;
-	int CapacityDataSize = 8 * 1024 * 1024;
+	int CapacityReps = 10;/*Количество измерений*/
+	int MBSize = 1; /*Размер МБ*/
+	int CapacityDataSize = MBSize * 1024 * 1024;
 
 	double TimeStart = 0;
 	double TimeDelta = 0;
