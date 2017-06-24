@@ -46,7 +46,7 @@ namespace Benchmarking_1
 					auto _startTime = MPI_Wtime();     /* start time */
 													   /* send message to worker - message tag set to 1.  */
 													   /* If return code indicates error quit */
-					rc = MPI_Send(NULL, 0, MPI_BYTE, dest, tag, MPI_COMM_WORLD);
+					rc = MPI_Send(NULL, 0, MPI_BYTE, j, tag, MPI_COMM_WORLD);
 
 					if (rc != MPI_SUCCESS)
 					{
@@ -57,7 +57,7 @@ namespace Benchmarking_1
 
 					/* Now wait to receive the echo reply from the worker  */
 					/* If return code indicates error quit */
-					rc = MPI_Recv(NULL, 0, MPI_BYTE, source, tag, MPI_COMM_WORLD, &status);
+					rc = MPI_Recv(NULL, 0, MPI_BYTE, j, tag, MPI_COMM_WORLD, &status);
 
 					if (rc != MPI_SUCCESS)
 					{
@@ -94,7 +94,7 @@ namespace Benchmarking_1
 			{
 				for (auto j = 1; j < numtasks; j++)
 				{
-					rc = MPI_Recv(NULL, 0, MPI_BYTE, source, tag, MPI_COMM_WORLD, &status);
+					rc = MPI_Recv(NULL, 0, MPI_BYTE, j, tag, MPI_COMM_WORLD, &status);
 
 					if (rc != MPI_SUCCESS)
 					{
@@ -105,7 +105,7 @@ namespace Benchmarking_1
 						return;
 					}
 
-					rc = MPI_Send(NULL, 0, MPI_BYTE, dest, tag, MPI_COMM_WORLD);
+					rc = MPI_Send(NULL, 0, MPI_BYTE, j, tag, MPI_COMM_WORLD);
 
 					if (rc != MPI_SUCCESS)
 					{
