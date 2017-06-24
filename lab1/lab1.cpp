@@ -178,12 +178,8 @@ int main(int argc, char*argv[])
 		//printf("\n TASK FINISHED \r\n");
 
 		// Тут расчет - в 2 конца
-
 		{
-			auto sumTOneWay = sumT;
-			/*sumTOneWay /= 2.0* (numtasks - 1)*reps;*/
-			sumTOneWay /= 2;
-			printf("Latency of channel is %2.8f seconds (One way %2.8f seconds), found in %d iterations\n", sumT, /*sumT / 2*/sumTOneWay, reps);
+			printf("Latency of channel is %2.8f seconds (One way %2.8f seconds), found in %d iterations\n", sumT, sumT / 2/*В один конец*/, reps);
 		}
 		//avgT = (sumT * 1000000) / reps;
 		//printf("***************************************************\n");
