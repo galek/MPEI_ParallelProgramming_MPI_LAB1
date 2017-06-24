@@ -3,9 +3,12 @@
 
 #include "stdafx.h"
 
+#include "mpi.h"
+
+#pragma comment(lib, "msmpi.lib")
 
 int main()
 {
-    return 0;
+	return 0;
 }
 
