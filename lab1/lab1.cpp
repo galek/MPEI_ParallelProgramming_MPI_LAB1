@@ -16,6 +16,7 @@
 #pragma comment(lib, "msmpi.lib")
 #pragma comment(lib, "Ws2_32.lib")
 
+
 /*
 1.	Измерение латентности и пропускной способности каналов обмена данными при использовании функций MPI. Задачи:
 1.	Вычислить латентность и пропускную способность при передаче данных с помощью функций MPI_Send/MPI_Recv. Учесть, что обмен при выполнении программы может на самом деле происходить как между процессорами одного хоста, так и между хостами.
@@ -23,12 +24,106 @@
 3.	Сравнить производительность функций MPI_Reduce и MPI_Send/MPI_Recv при разном количестве задействованных узлов.
 */
 
+namespace Benchmarking_1
+{
+	void func(int&rank, int&dest, int&source, int reps, int&rc, double &sumT, int &avgT, char msg, MPI_Status& status, int tag, int numtasks)
+	{
+
+		if (rank == 0)
+		{
+			/* round-trip latency timing test */
+			printf("task %d has started...\n", rank);
+			printf("Beginning latency timing test. Number of reps = %d.\n", reps);
+			printf("***************************************************\n");
+			printf("Rep#       T1               T2            deltaT\n");
+			dest = 1;
+			source = 1;
+
+			for (auto i = 1; i <= reps; i++)
+			{
+				for (auto i = 0; i < numtasks; i++)
+				{
+					auto _startTime = MPI_Wtime();     /* start time */
+													   /* send message to worker - message tag set to 1.  */
+													   /* If return code indicates error quit */
+					rc = MPI_Send(&msg, 1, MPI_BYTE, dest, tag, MPI_COMM_WORLD);
+
+					if (rc != MPI_SUCCESS)
+					{
+						printf("Send error in task 0!\n");
+						MPI_Abort(MPI_COMM_WORLD, rc);
+						exit(1);
+					}
+
+					/* Now wait to receive the echo reply from the worker  */
+					/* If return code indicates error quit */
+					rc = MPI_Recv(&msg, 1, MPI_BYTE, source, tag, MPI_COMM_WORLD, &status);
+
+					if (rc != MPI_SUCCESS)
+					{
+						printf("Receive error in task 0!\n");
+						MPI_Abort(MPI_COMM_WORLD, rc);
+						exit(1);
+					}
+
+					auto _endTime = MPI_Wtime();     /* end time */
+
+													 /* calculate round trip time and print */
+					auto deltaT = _endTime - _startTime;
+					printf("%4d  %8.8f  %8.8f  %2.8f\n", i, _startTime, _endTime, deltaT);
+					sumT += deltaT;
+				}
+			}
+			avgT = (sumT * 1000000) / reps;
+			printf("***************************************************\n");
+			printf("\n*** Avg round trip time = %d microseconds\n", avgT);
+			printf("*** Avg one way latency = %d microseconds\n", avgT / 2);
+		}
+
+		else if (rank == 1)
+		{
+			printf("task %d has started...\n", rank);
+			dest = 0;
+			source = 0;
+
+			for (auto i = 1; i <= reps; i++)
+			{
+				for (auto i = 0; i < numtasks; i++) 
+				{
+					rc = MPI_Recv(&msg, 1, MPI_BYTE, source, tag, MPI_COMM_WORLD, &status);
+
+					if (rc != MPI_SUCCESS)
+					{
+						printf("Receive error in task 1!\n");
+						MPI_Abort(MPI_COMM_WORLD, rc);
+
+						exit(1);
+						return;
+					}
+
+					rc = MPI_Send(&msg, 1, MPI_BYTE, dest, tag, MPI_COMM_WORLD);
+
+					if (rc != MPI_SUCCESS)
+					{
+						printf("Send error in task 1!\n");
+						MPI_Abort(MPI_COMM_WORLD, rc);
+
+						exit(1);
+						return;
+					}
+				}
+			}
+		}
+	}
+}
 
 int main(int argc, char*argv[])
 {
 	int reps,                   /* number of samples per test */
 		tag,                    /* MPI message tag parameter */
+
 		numtasks,               /* number of MPI tasks */
+
 		rank,                   /* my MPI task number */
 		dest, source,           /* send/receive task designators */
 		avgT,                   /* average time per rep in microseconds */
@@ -50,7 +145,6 @@ int main(int argc, char*argv[])
 	}
 
 	// Расчеты
-
 	MPI_Barrier(MPI_COMM_WORLD);
 
 	/*
@@ -72,92 +166,20 @@ int main(int argc, char*argv[])
 	tag = 1;
 	reps = NUMBER_REPS;
 
-#if 0
-	//{
-	//	if (rank == 0) {
-	//		/* round-trip latency timing test */
-	//		printf("task %d has started...\n", rank);
-	//		printf("Beginning latency timing test. Number of reps = %d.\n", reps);
-	//		printf("***************************************************\n");
-	//		printf("Rep#       T1               T2            deltaT\n");
-	//		dest = 1;
-	//		source = 1;
-	//		for (n = 1; n <= reps; n++) {
-	//			T1 = MPI_Wtime();     /* start time */
-	//								  /* send message to worker - message tag set to 1.  */
-	//								  /* If return code indicates error quit */
-	//			rc = MPI_Send(&msg, 1, MPI_BYTE, dest, tag, MPI_COMM_WORLD);
-	//			if (rc != MPI_SUCCESS) {
-	//				printf("Send error in task 0!\n");
-	//				MPI_Abort(MPI_COMM_WORLD, rc);
-	//				exit(1);
-	//			}
-	//			/* Now wait to receive the echo reply from the worker  */
-	//			/* If return code indicates error quit */
-	//			rc = MPI_Recv(&msg, 1, MPI_BYTE, source, tag, MPI_COMM_WORLD,
-	//				&status);
-	//			if (rc != MPI_SUCCESS) {
-	//				printf("Receive error in task 0!\n");
-	//				MPI_Abort(MPI_COMM_WORLD, rc);
-	//				exit(1);
-	//			}
-	//			T2 = MPI_Wtime();     /* end time */
-
-	//								  /* calculate round trip time and print */
-	//			deltaT = T2 - T1;
-	//			printf("%4d  %8.8f  %8.8f  %2.8f\n", n, T1, T2, deltaT);
-	//			sumT += deltaT;
-	//		}
-	//		avgT = (sumT * 1000000) / reps;
-	//		printf("***************************************************\n");
-	//		printf("\n*** Avg round trip time = %d microseconds\n", avgT);
-	//		printf("*** Avg one way latency = %d microseconds\n", avgT / 2);
-	//	}
-
-	//	else if (rank == 1) {
-	//		printf("task %d has started...\n", rank);
-	//		dest = 0;
-	//		source = 0;
-	//		for (n = 1; n <= reps; n++) {
-	//			rc = MPI_Recv(&msg, 1, MPI_BYTE, source, tag, MPI_COMM_WORLD,
-	//				&status);
-	//			if (rc != MPI_SUCCESS) {
-	//				printf("Receive error in task 1!\n");
-	//				MPI_Abort(MPI_COMM_WORLD, rc);
-
-	//				exit(1);
-	//				return 1;
-	//			}
-	//			rc = MPI_Send(&msg, 1, MPI_BYTE, dest, tag, MPI_COMM_WORLD);
-	//			if (rc != MPI_SUCCESS) {
-	//				printf("Send error in task 1!\n");
-	//				MPI_Abort(MPI_COMM_WORLD, rc);
-
-	//				exit(1);
-	//				return 1;
-	//			}
-	//		}
-	//	}
-	//}
-#else
-	{
-		using namespace std;
-
-		char host[256];
-		gethostname(host, sizeof(host) / sizeof(host[0])); // machine we are running on 
-
-		cout << "Process " << rank << " of " << numtasks << " is running on '" << host << "'." << endl;
-
-
-	}
-#endif
+	Benchmarking_1::func(rank, dest, source, reps, rc, sumT, avgT, msg, status, tag, numtasks);
 
 	if (rank == 0) {
 		printf("\n TASK FINISHED \r\n");
+
+		printf("Latency of channel is %2.8f seconds, found in %d iterations\n", sumT, reps);
+
+		//avgT = (sumT * 1000000) / reps;
+		//printf("***************************************************\n");
+		//printf("\n*** Avg round trip time = %d microseconds\n", avgT);
+		//printf("*** Avg one way latency = %d microseconds\n", avgT / 2);
 	}
 
 	MPI_Finalize();
 	exit(0);
 	return 0;
 }
-
