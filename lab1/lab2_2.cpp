@@ -92,6 +92,11 @@ namespace Benchmarking_1
 	{
 		Task1(_count, SumTimeDelta, size, rank, status, BCastTimeDelta, true);
 	}
+
+	inline void RunTask1(int _count, double&SumTimeDelta, double&BCastTimeDelta, int size, int rank, MPI_Status& status)
+	{
+		Task1(_count, SumTimeDelta, size, rank, status, BCastTimeDelta, false);
+	}
 }
 
 namespace Benchmarking_2
