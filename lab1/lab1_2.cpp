@@ -17,6 +17,10 @@
 //#pragma comment(lib, "Ws2_32.lib")
 #endif
 
+#define SAFE_DELETE_ARRAY(x) if(x) delete[]x;
+#ifndef _CRT_SECURE_NO_WARNINGS
+#define _CRT_SECURE_NO_WARNINGS
+#endif
 
 /*
 1.	Измерение латентности и пропускной способности каналов обмена данными при использовании функций MPI. Задачи:
@@ -27,27 +31,23 @@
 
 namespace Benchmarking_1
 {
-	void func(int&rank, int&dest, int&source, int reps, int&rc, double &sumT, int &avgT, char msg, MPI_Status& status, int tag, int numtasks)
+	void func(int reps, int size, int bytessize, int rank, MPI_Status& status)
 	{
+		double sumT = 0;
 
-		if (rank == 0)
+		char* msg = new char[bytessize];
+
+
+		for (auto i = 0; i < reps; i++)
 		{
-			/* round-trip latency timing test */
-			printf("task %d has started...\n", rank);
-			printf("Beginning latency timing test. Number of reps = %d.\n", reps);
-			printf("***************************************************\n");
-			printf("Rep#       T1               T2            deltaT\n");
-			dest = 1;
-			source = 1;
-
-			for (auto i = 1; i <= reps; i++)
+			if (rank == 0)
 			{
-				for (auto j = 1; j < numtasks; j++)
+				for (auto j = 1; j < size; j++)
 				{
 					auto _startTime = MPI_Wtime();     /* start time */
 													   /* send message to worker - message tag set to 1.  */
 													   /* If return code indicates error quit */
-					rc = MPI_Send(&msg, 1, MPI_BYTE, dest, tag, MPI_COMM_WORLD);
+					int rc = MPI_Send(msg, bytessize, MPI_BYTE, j, 1, MPI_COMM_WORLD);
 
 					if (rc != MPI_SUCCESS)
 					{
@@ -58,7 +58,7 @@ namespace Benchmarking_1
 
 					/* Now wait to receive the echo reply from the worker  */
 					/* If return code indicates error quit */
-					rc = MPI_Recv(&msg, 1, MPI_BYTE, source, tag, MPI_COMM_WORLD, &status);
+					rc = MPI_Recv(msg, bytessize, MPI_BYTE, j, 2, MPI_COMM_WORLD, &status);
 
 					if (rc != MPI_SUCCESS)
 					{
@@ -69,54 +69,24 @@ namespace Benchmarking_1
 
 					auto _endTime = MPI_Wtime();     /* end time */
 
-													 /* calculate round trip time and print */
+					/* calculate round trip time and print */
 					auto deltaT = _endTime - _startTime;
-					{
-						//deltaT /= CLOCKS_PER_SEC; // To Milliseconds; 1 microsecond=0,001ms
-					}
 
-					printf("%4d  %8.8f  %8.8f  %2.8f\n", i, _startTime, _endTime, deltaT);
 					sumT += deltaT;
 				}
 			}
-			avgT = (sumT * 1000000) / reps;
-			printf("***************************************************\n");
-			printf("\n*** Avg round trip time = %d microseconds\n", avgT);
-			printf("*** Avg one way latency = %d microseconds\n", avgT / 2);
+			else
+			{
+				MPI_Recv(msg, bytessize, MPI_BYTE, 0, 1, MPI_COMM_WORLD, &status);
+				MPI_Send(msg, bytessize, MPI_BYTE, 0, 2, MPI_COMM_WORLD);
+			}
 		}
 
-		else if (rank == 1)
 		{
-			printf("task %d has started...\n", rank);
-			dest = 0;
-			source = 0;
-
-			for (auto i = 1; i <= reps; i++)
-			{
-				for (auto j = 1; j < numtasks; j++)
-				{
-					rc = MPI_Recv(&msg, 1, MPI_BYTE, source, tag, MPI_COMM_WORLD, &status);
-
-					if (rc != MPI_SUCCESS)
-					{
-						printf("Receive error in task 1!\n");
-						MPI_Abort(MPI_COMM_WORLD, rc);
-
-						exit(1);
-						return;
-					}
-
-					rc = MPI_Send(&msg, 1, MPI_BYTE, dest, tag, MPI_COMM_WORLD);
-
-					if (rc != MPI_SUCCESS)
-					{
-						printf("Send error in task 1!\n");
-						MPI_Abort(MPI_COMM_WORLD, rc);
-
-						exit(1);
-						return;
-					}
-				}
+			SAFE_DELETE_ARRAY(msg);
+			if (rank == 0) {
+				double cap = 2.0*reps*bytessize*(size - 1) / sumT;
+				printf("Channel capacity = %.0f bytes per second, found in %d repeats, data length = %d bytes\n", cap, reps, bytessize);
 			}
 		}
 	}
@@ -124,10 +94,17 @@ namespace Benchmarking_1
 
 int main(int argc, char*argv[])
 {
-	int reps,                   /* number of samples per test */
-		tag,                    /* MPI message tag parameter */
+	//int _len;
+	//if (sscanf(argv[0], "%i", &_len) != 1) {
+	//	fprintf(stderr, "error - not an integer");
+	//	return 1;
+	//}
 
-		numtasks,               /* number of MPI tasks */
+
+
+	int 		tag,                    /* MPI message tag parameter */
+
+		size,               /* number of MPI tasks */
 
 		rank,                   /* my MPI task number */
 		dest, source,           /* send/receive task designators */
@@ -137,55 +114,37 @@ int main(int argc, char*argv[])
 	double T1, T2,              /* start/end times per rep */
 		sumT,                   /* sum of all reps times */
 		deltaT;                 /* time for one rep */
-	char msg;                   /* buffer containing 1 byte message */
+	char* msg;                   /* buffer containing 1 byte message */
+
+
 	MPI_Status status;          /* MPI receive routine parameter */
 
 	MPI_Init(&argc, &argv);
 
-	MPI_Comm_size(MPI_COMM_WORLD, &numtasks);
+	MPI_Comm_size(MPI_COMM_WORLD, &size);
 	MPI_Comm_rank(MPI_COMM_WORLD, &rank);
-	if (rank == 0 && numtasks != 2) {
-		printf("Number of tasks = %d\n", numtasks);
-		printf("Only need 2 tasks - extra will be ignored...\n");
-	}
 
 	// Расчеты
 	MPI_Barrier(MPI_COMM_WORLD);
 
-	/*
-	NODE-1:
-	rank<=0
-	size<=N
-
-	NODE-2:
-	rank<=1
-	size<=N
-
-	NODE-N:
-	rank<=N-1
-	size<=N
-	*/
-
 	sumT = 0;
-	msg = 'x';
 	tag = 1;
-	reps = NUMBER_REPS;
 
-	Benchmarking_1::func(rank, dest, source, reps, rc, sumT, avgT, msg, status, tag, numtasks);
+	int CapacityReps = 50;
+	int CapacityDataSize = 8 * 1024 * 1024;
 
+	double TimeStart = 0;
+	double TimeDelta = 0;
 
-	if (rank == 0) {
-		//printf("\n TASK FINISHED \r\n");
-
-		// Тут расчет - в 2 конца
-		{
-			printf("Latency of channel is %2.8f seconds (One way %2.8f seconds), found in %d iterations\n", sumT, sumT / 2/*В один конец*/, reps);
-		}
-		//avgT = (sumT * 1000000) / reps;
-		//printf("***************************************************\n");
-		//printf("\n*** Avg round trip time = %d microseconds\n", avgT);
-		//printf("*** Avg one way latency = %d microseconds\n", avgT / 2);
+	printf("Capacity checking Started \n");
+	for (int i = 1; i <= 8; i++) {
+		TimeStart = MPI_Wtime();
+		Benchmarking_1::func(CapacityReps, size, CapacityDataSize*i, rank, status);
+		TimeDelta = MPI_Wtime() - TimeStart;
 	}
+
+	if (rank == 0)
+		printf("Capacity checking DONE (measuring) %f\n", TimeDelta);
 
 	MPI_Finalize();
 	exit(0);
