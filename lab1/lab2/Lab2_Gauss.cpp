@@ -12,6 +12,15 @@
 //#pragma comment(lib, "Ws2_32.lib")
 #endif
 
+#ifndef SAFE_DELETE
+#define SAFE_DELETE(x) if(x) { delete x; x=nullptr;}
+#endif
+
+#ifndef SAFE_DELETE_ARRAY
+#define SAFE_DELETE_ARRAY(x) if(x) { delete []x; x=nullptr;}
+#endif
+
+
 namespace MatrixCompute
 {
 	struct MatrixState
@@ -20,7 +29,28 @@ namespace MatrixCompute
 		int m_SeletedRowForSwappingWithMain;
 	};
 
+	static inline bool IsMain(int rank) {
+		return rank == 0;
+	}
+
+	static const int MAIN_RANK = 0;
+
+	void GenerateMatrix(double*matrix, int rank, int worldSize, int _equationCount)
+	{
+		if (IsMain(rank))
+		{
+			for (int node = 1; node < worldSize; ++node)
+			{
+			// сгенерируем столбец
+			}
+		}
+		else
+		{
+		}
+	}
+
 }
+using namespace MatrixCompute;
 
 
 int main(int argc, char **argv)
@@ -42,11 +72,19 @@ int main(int argc, char **argv)
 		return 1;
 	}
 
-	if (rank == 0)
-	{
-		printf("World size is %d\n", worldSize);
 
+	auto _timeStart = MPI_Wtime();
+
+	auto *matrix = new double[10];
+	GenerateMatrix(matrix, rank, worldSize, 10);
+
+	auto _timeEnd = MPI_Wtime();
+
+
+	if (IsMain(rank)) {
+		printf("Time for generating = %f\n", _timeEnd - _timeStart);
 	}
+	MPI_Barrier(MPI_COMM_WORLD);
 
 
 	MPI_Finalize();
