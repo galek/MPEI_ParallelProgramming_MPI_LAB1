@@ -27,6 +27,28 @@ int main(int argc, char **argv)
 {
 	MPI_Init(&argc, &argv);
 
+	// Get the number of processes
+	int worldSize = 0;
+	MPI_Comm_size(MPI_COMM_WORLD, &worldSize);
+
+	// Get the rank of the process
+	int rank = 0;
+	MPI_Comm_rank(MPI_COMM_WORLD, &rank);
+
+	MPI_Status status;
+
+	if (worldSize < 2) {
+		printf("World is too small\n");
+		return 1;
+	}
+
+	if (rank == 0)
+	{
+		printf("World size is %d\n", worldSize);
+
+	}
+
+
 	MPI_Finalize();
 	return 0;
 }
