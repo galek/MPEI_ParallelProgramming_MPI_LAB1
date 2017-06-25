@@ -23,7 +23,7 @@
 #endif
 
 /*
-2.	Сравнить производительность функций MPI_Bcast и MPI_Send/MPI_Recv при разном количестве задействованных узлов.
+3.	Сравнить производительность функций MPI_Reduce и MPI_Send/MPI_Recv при разном количестве задействованных узлов.
 */
 
 namespace Benchmarking
@@ -95,70 +95,11 @@ namespace Benchmarking
 			}
 		}
 
-#if 1
-		{
-			if ((_compare == MODE::REDUCE))
-			{
-				MPI_Barrier(MPI_COMM_WORLD);
-
-				auto _startTime = MPI_Wtime();     /* start time */
-
-
-				// Works
-				int localsum[2] = { 0,0 };
-				int globalsum[2] = { 0,0 };
-
-				if (rank % 2 == 1)
-				{
-					localsum[0] += 5;
-				}
-				else if (rank > 0 && (rank % 2 == 0))
-				{
-					localsum[1] += 10;
-				}
-
-				// TODO: Переписать общую сумму
-				MPI_Reduce(localsum, globalsum, 2, MPI_INT, MPI_SUM, 0, MPI_COMM_WORLD);
-
-				if (rank == 0)
-				{
-					printf("globalsum1 = %d \n", globalsum[0]);
-					printf("globalsum2 = %d \n", globalsum[1]);
-				}
-
-				auto _endTime = MPI_Wtime();     /* end time */
-
-				/* calculate round trip time and print */
-				auto deltaT = _endTime - _startTime;
-				ReduceTimeDelta += deltaT;
-
-			}
-		}
-#else
-		// Works
-		int localsum[2] = { 0,0 };
-		int globalsum[2] = { 0,0 };
-
-		if (rank % 2 == 1)
-		{
-			localsum[0] += 5;
-		}
-		else if (rank > 0 && (rank % 2 == 0))
-		{
-			localsum[1] += 10;
-		}
-
-		MPI_Reduce(localsum, globalsum, 2, MPI_INT, MPI_SUM, 0, MPI_COMM_WORLD);
-
-		if (rank == 0)
-		{
-			printf("globalsum1 = %d \n", globalsum[0]);
-			printf("globalsum2 = %d \n", globalsum[1]);
-		}
-#endif
 	}
 
-
+	/*
+	3.	Сравнить производительность функций MPI_Reduce и MPI_Send/MPI_Recv при разном количестве задействованных узлов.
+	*/
 	// Просто считает сумму, если рангу узла
 	void ReduceTask(int reps, double &SumTimeDelta, int size, int rank, MPI_Status& status, double&BCastTimeDelta, double&ReduceTimeDelta, MODE _compare)
 	{
@@ -273,7 +214,9 @@ namespace Benchmarking
 		Task1(_count, SumTimeDelta, size, rank, status, BCastTimeDelta, ReduceTimeDelta, MODE::LATENCY);
 	}
 
-	/*Сравнить производительность функций MPI_Reduce и MPI_Send/MPI_Recv при разном количестве задействованных узлов.*/
+	/*
+	3.	Сравнить производительность функций MPI_Reduce и MPI_Send/MPI_Recv при разном количестве задействованных узлов.
+	*/
 	inline void RunTask3(int _count, double&SumTimeDelta, double&BCastTimeDelta, double&ReduceTimeDelta, int size, int rank, MPI_Status& status)
 	{
 		ReduceTask(_count, SumTimeDelta, size, rank, status, BCastTimeDelta, ReduceTimeDelta, MODE::REDUCE);
