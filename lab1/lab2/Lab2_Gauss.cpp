@@ -12,8 +12,21 @@
 //#pragma comment(lib, "Ws2_32.lib")
 #endif
 
-struct MatrixState
+namespace MatrixCompute
 {
-	int m_SelectedRow;
-	int m_SeletedRowForSwappingWithMain;
-};
+	struct MatrixState
+	{
+		int m_SelectedRow;
+		int m_SeletedRowForSwappingWithMain;
+	};
+
+}
+
+
+int main(int argc, char **argv)
+{
+	MPI_Init(&argc, &argv);
+
+	MPI_Finalize();
+	return 0;
+}
