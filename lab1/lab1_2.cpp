@@ -92,7 +92,9 @@ namespace Benchmarking_1
 
 	void BenchmarkCapacity(int MBSize, int CapacityReps, double &TimeDelta, int size, int rank, MPI_Status& status)
 	{
-		for (int i = 1; i <= 8; i++) {
+		// Делаем замеры от 8мб, до 256
+		// MBSize*i
+		for (int i = 1; i <= 32; i++) {
 			auto TimeStart = MPI_Wtime();
 			Task_1_1_2(CapacityReps, size, MBSize*i, rank, status);
 			TimeDelta = MPI_Wtime() - TimeStart;
@@ -136,11 +138,11 @@ int main(int argc, char*argv[])
 
 	{
 		using namespace Benchmarking_1;
-		BenchmarkCapacity(1/*Размер МБ*/, 10/*Количество измерений*/, TimeDelta, size, rank, status);
+		BenchmarkCapacity(1/*Начальный размер, потом множится от 1 до 32*/, 10/*Количество измерений*/, TimeDelta, size, rank, status);
 	}
 
 	if (rank == 0)
-		printf("Capacity checking DONE (measuring) %f\n", TimeDelta);
+		printf("Capacity checking DONE %f\n", TimeDelta);
 
 	MPI_Finalize();
 	exit(0);

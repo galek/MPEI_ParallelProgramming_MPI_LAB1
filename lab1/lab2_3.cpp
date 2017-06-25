@@ -58,7 +58,7 @@ namespace Benchmarking
 
 					auto _endTime = MPI_Wtime();     /* end time */
 
-					/* calculate round trip time and print */
+													 /* calculate round trip time and print */
 					auto deltaT = _endTime - _startTime;
 
 					SumTimeDelta += deltaT;
@@ -124,7 +124,7 @@ namespace Benchmarking
 				auto _endTime = MPI_Wtime();     /* end time */
 
 
-				 /* calculate round trip time and print */
+												 /* calculate round trip time and print */
 				auto deltaT = _endTime - _startTime;
 
 				SumTimeDelta += deltaT;
@@ -261,8 +261,10 @@ int main(int argc, char*argv[])
 	/* оличество измерений*/
 #if LOCAL_USE
 	int Count = 10;
+	const int TimeConverter = 1000000;
 #else
 	int Count = 1000000;
+	const int TimeConverter = 1000000;// тут и 1ку используют еще
 #endif
 	{
 		using namespace Benchmarking;
@@ -276,9 +278,13 @@ int main(int argc, char*argv[])
 
 	if (rank == 0)
 	{
-		printf("Send/Recv time %f ms for operations %i Performance %f operations for per-ms \n", SumTimeDelta*(1000000 / CLOCKS_PER_SEC), Count, SumTimeDelta*(1000000 / CLOCKS_PER_SEC) / Count);
-		printf("BCast time %f ms for operations %i Performance %f operations for per-ms \n", BCastTimeDelta*(1000000 / CLOCKS_PER_SEC), Count, SumTimeDelta *(1000000 / CLOCKS_PER_SEC) / Count);
-		printf("ReduceTimeDelta time %f ms for operations %i Performance %f operations for per-ms \n", ReduceTimeDelta*(1000000 / CLOCKS_PER_SEC), Count, ReduceTimeDelta *(1000000 / CLOCKS_PER_SEC) / Count);
+		// ¬ќќЅў≈  ќЋ»„≈—“¬ќ ќѕ≈–ј÷»… Ќ≈ѕ–ј¬»Ћ№Ќќ —„»“ј≈“—я, должно быть операций в сек
+		printf("===========================================");
+		printf("Send/Recv time %f ms for operations %i Performance %f operations for per-ms \n", SumTimeDelta*(TimeConverter / CLOCKS_PER_SEC), Count, Count / SumTimeDelta*(TimeConverter / CLOCKS_PER_SEC));
+		printf("===========================================");
+		//printf("BCast time %f ms for operations %i Performance %f operations for per-ms \n", BCastTimeDelta*(TimeConverter / CLOCKS_PER_SEC), Count, SumTimeDelta *(TimeConverter / CLOCKS_PER_SEC) / Count);
+		printf("===========================================");
+		printf("ReduceTimeDelta time %f ms for operations %i Performance %f operations for per-ms \n", ReduceTimeDelta*(TimeConverter / CLOCKS_PER_SEC), Count, Count / ReduceTimeDelta *(TimeConverter / CLOCKS_PER_SEC));
 	}
 
 	MPI_Finalize();
