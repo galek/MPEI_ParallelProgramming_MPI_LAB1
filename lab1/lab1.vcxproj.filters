@@ -13,6 +13,9 @@
       <UniqueIdentifier>{67DA6AB6-F800-4c08-8B7A-83BB121AAD01}</UniqueIdentifier>
       <Extensions>rc;ico;cur;bmp;dlg;rc2;rct;bin;rgs;gif;jpg;jpeg;jpe;resx;tiff;tif;png;wav;mfcribbon-ms</Extensions>
     </Filter>
+    <Filter Include="Файлы исходного кода\Lab1_Chanels">
+      <UniqueIdentifier>{4515aceb-358b-4288-816f-76ba3dc0587b}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <Text Include="ReadMe.txt" />
@@ -30,15 +33,18 @@
       <Filter>Файлы исходного кода</Filter>
     </ClCompile>
     <ClCompile Include="lab1_1.cpp">
-      <Filter>Файлы исходного кода</Filter>
+      <Filter>Файлы исходного кода\Lab1_Chanels</Filter>
     </ClCompile>
     <ClCompile Include="lab1_2.cpp">
-      <Filter>Файлы исходного кода</Filter>
+      <Filter>Файлы исходного кода\Lab1_Chanels</Filter>
     </ClCompile>
     <ClCompile Include="lab2_2.cpp">
-      <Filter>Файлы исходного кода</Filter>
+      <Filter>Файлы исходного кода\Lab1_Chanels</Filter>
     </ClCompile>
     <ClCompile Include="lab2_3.cpp">
+      <Filter>Файлы исходного кода\Lab1_Chanels</Filter>
+    </ClCompile>
+    <ClCompile Include="lab2\Lab2_Gauss.cpp">
       <Filter>Файлы исходного кода</Filter>
     </ClCompile>
   </ItemGroup>
