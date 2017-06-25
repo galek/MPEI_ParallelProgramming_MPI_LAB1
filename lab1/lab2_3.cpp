@@ -129,7 +129,7 @@ namespace Benchmarking
 
 				SumTimeDelta += deltaT;
 
-		}
+			}
 			else {
 
 				int localsum = 0;
@@ -150,7 +150,7 @@ namespace Benchmarking
 
 			if (rank == 0)
 				printf("SEND_RECV globalsum = %i \n", globalsum);
-	}
+		}
 
 
 		{
@@ -202,7 +202,7 @@ namespace Benchmarking
 
 			}
 		}
-}
+	}
 
 	inline void RunTask2(int _count, double&SumTimeDelta, double&BCastTimeDelta, double&ReduceTimeDelta, int size, int rank, MPI_Status& status)
 	{
@@ -259,7 +259,11 @@ int main(int argc, char*argv[])
 
 
 	/*Количество измерений*/
+#if LOCAL_USE
 	int Count = 10;
+#else
+	int Count = 1000000;
+#endif
 	{
 		using namespace Benchmarking;
 		{
