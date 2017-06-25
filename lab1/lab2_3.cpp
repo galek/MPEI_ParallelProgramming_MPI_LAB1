@@ -103,7 +103,7 @@ namespace Benchmarking
 
 				auto _startTime = MPI_Wtime();     /* start time */
 
-	
+
 				// Works
 				int localsum[2] = { 0,0 };
 				int globalsum[2] = { 0,0 };
@@ -162,45 +162,6 @@ namespace Benchmarking
 	// Просто считает сумму, если рангу узла
 	void ReduceTask(int reps, double &SumTimeDelta, int size, int rank, MPI_Status& status, double&BCastTimeDelta, double&ReduceTimeDelta, MODE _compare)
 	{
-		//for (auto i = 0; i < reps; i++)
-		//{
-		//	if (rank == 0)
-		//	{
-		//		for (auto j = 1; j < size; j++)
-		//		{
-		//			auto _startTime = MPI_Wtime();     /* start time */
-		//												   /* send message to worker - message tag set to 1.  */
-		//												   /* If return code indicates error quit */
-		//			int rc = MPI_Send(nullptr, 0, MPI_BYTE, j, 1, MPI_COMM_WORLD);
-
-		//			if (rc != MPI_SUCCESS)
-		//			{
-		//				printf("Send error in task 0!\n");
-		//				MPI_Abort(MPI_COMM_WORLD, rc);
-		//				exit(1);
-		//			}
-
-		//			auto _endTime = MPI_Wtime();     /* end time */
-
-		//											 /* calculate round trip time and print */
-		//			auto deltaT = _endTime - _startTime;
-
-		//			SumTimeDelta += deltaT;
-		//		}
-		//	}
-		//	else
-		//	{
-		//		/* Now wait to receive the echo reply from the worker  */
-		//		auto rc = MPI_Recv(nullptr, 0, MPI_BYTE, 0, 1, MPI_COMM_WORLD, &status);
-		//		if (rc != MPI_SUCCESS)
-		//		{
-		//			printf("Receive error in task 0!\n");
-		//			MPI_Abort(MPI_COMM_WORLD, rc);
-		//			exit(1);
-		//		}
-		//	}
-		//}
-
 		{
 			int globalsum = 0;
 
@@ -227,7 +188,7 @@ namespace Benchmarking
 
 				SumTimeDelta += deltaT;
 
-			}
+		}
 			else {
 
 				int localsum = 0;
@@ -248,7 +209,7 @@ namespace Benchmarking
 
 			if (rank == 0)
 				printf("SEND_RECV globalsum = %i \n", globalsum);
-		}
+	}
 
 
 		{
@@ -300,7 +261,7 @@ namespace Benchmarking
 
 			}
 		}
-	}
+}
 
 	inline void RunTask2(int _count, double&SumTimeDelta, double&BCastTimeDelta, double&ReduceTimeDelta, int size, int rank, MPI_Status& status)
 	{
@@ -369,7 +330,7 @@ int main(int argc, char*argv[])
 	if (rank == 0)
 	{
 		printf("Send/Recv time %f ms for operations %i Performance %f operations for per-ms \n", SumTimeDelta*(1000000 / CLOCKS_PER_SEC), Count, SumTimeDelta*(1000000 / CLOCKS_PER_SEC) / Count);
-		//printf("BCast time %f ms for operations %i Performance %f operations for per-ms \n", BCastTimeDelta*(1000000 / CLOCKS_PER_SEC), Count, SumTimeDelta *(1000000 / CLOCKS_PER_SEC) / Count);
+		printf("BCast time %f ms for operations %i Performance %f operations for per-ms \n", BCastTimeDelta*(1000000 / CLOCKS_PER_SEC), Count, SumTimeDelta *(1000000 / CLOCKS_PER_SEC) / Count);
 		printf("ReduceTimeDelta time %f ms for operations %i Performance %f operations for per-ms \n", ReduceTimeDelta*(1000000 / CLOCKS_PER_SEC), Count, ReduceTimeDelta *(1000000 / CLOCKS_PER_SEC) / Count);
 	}
 
