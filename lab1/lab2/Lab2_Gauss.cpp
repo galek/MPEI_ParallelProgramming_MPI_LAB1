@@ -13,11 +13,11 @@
 #endif
 
 #ifndef SAFE_DELETE
-#define SAFE_DELETE(x) if(x) { delete x; x=nullptr;}
+#define SAFE_DELETE(x) if(x) { delete x; x=nullptr;};
 #endif
 
 #ifndef SAFE_DELETE_ARRAY
-#define SAFE_DELETE_ARRAY(x) if(x) { delete []x; x=nullptr;}
+#define SAFE_DELETE_ARRAY(x) if(x) { delete []x; x=nullptr;};
 #endif
 
 
@@ -158,15 +158,18 @@ namespace MatrixCompute
 	};
 
 	// Элементарные преобразования на прямом пути - вычитает из строк элементы главной строки*на множители
-	inline void MatrixModificateOnDirectWay(int _equationCount, int _columnsPerNode, int mainRow, double *matrix, double *multipliers) {
-		int row;
-		for (row = mainRow + 1; row < _equationCount; ++row) {
-			if (multipliers[row] != 0) {
-				int column;
-				for (column = 0; column < _columnsPerNode; ++column) {
-					int indexInMatrix = GetIndexInLocalMatrix(_equationCount, row, column);
-					int mainIndexInColumn = GetIndexInLocalMatrix(_equationCount, mainRow, column);
-					matrix[indexInMatrix] = matrix[indexInMatrix] - matrix[mainIndexInColumn] * multipliers[row];
+	inline void MatrixModificateOnDirectWay(int _equationCount, int _columnsPerNode, int _mainRow, double *_matrix, double *multipliers) {
+		//row
+		for (int i = _mainRow + 1; i < _equationCount; ++i)
+		{
+			if (multipliers[i] != 0)
+			{
+				for (int j = 0; j < _columnsPerNode; ++j)
+				{
+					int indexInMatrix = GetIndexInLocalMatrix(_equationCount, i, j);
+					int mainIndexInColumn = GetIndexInLocalMatrix(_equationCount, _mainRow, j);
+
+					_matrix[indexInMatrix] = _matrix[indexInMatrix] - _matrix[mainIndexInColumn] * multipliers[i];
 				}
 			}
 		}
@@ -202,10 +205,10 @@ namespace MatrixCompute
 		//Прямой ход метода Гаусса, приведение к треугольному виду.
 		MatrixMinor minor;
 
-		for (int activeNode = 1; activeNode < _worldSize; activeNode++)
+		for (int activeNode = 1; activeNode < _worldSize; ++activeNode)
 		{
 			//column
-			for (int j = 0; j < _columnsPerNode; j++)
+			for (int j = 0; j < _columnsPerNode; ++j)
 			{
 				if (_rank == activeNode)
 				{
@@ -224,7 +227,7 @@ namespace MatrixCompute
 					SwapRows(_equationCount, IsMain(_rank) ? 1 : _columnsPerNode, minor.m_SelectedRow, minor.m_SeletedRowForSwappingWithMain, _matrix);
 				}
 
-				//запоминаем главную строку
+				// запоминаем главную строку
 				int mainRow = minor.m_SelectedRow;
 
 				double *multipliers = new double[_equationCount];
@@ -235,8 +238,10 @@ namespace MatrixCompute
 				}
 
 				MPI_Bcast(multipliers, _equationCount, MPI_DOUBLE, activeNode, MPI_COMM_WORLD);
+
 				MatrixModificateOnDirectWay(_equationCount, IsMain(_rank) ? 1 : _columnsPerNode, mainRow, _matrix, multipliers);
-				free(multipliers);
+
+				SAFE_DELETE(multipliers);
 			}
 		}
 
@@ -247,9 +252,33 @@ namespace MatrixCompute
 		}
 	}
 
+	// _row- вне
+	inline void RevertWay(double*_row, double*_solution, int _rank, int _equationCount, int _columnsPerNode, int _worldSize)
+	{
+		if (IsMain(_rank))
+		{
+			_solution = new double[_equationCount];
+			_row = new double[_equationCount];
+		}
+		else
+		{
+			_row = new double[_columnsPerNode];
+		}
+
+		int *_dataMap = new int[_worldSize];
+		int *_receiveOffsets = new int[_worldSize];
+
+
+		for (int nonMasterNode = 1; nonMasterNode < _worldSize; ++nonMasterNode)
+		{
+			_dataMap[nonMasterNode] = _columnsPerNode;
+			_receiveOffsets[nonMasterNode] = _columnsPerNode * (nonMasterNode - 1);
+		}
+	}
+
 }
 using namespace MatrixCompute;
-
+using namespace Utils;
 
 int main(int argc, char **argv)
 {
@@ -293,17 +322,17 @@ int main(int argc, char **argv)
 
 
 
-	double *matrix = nullptr;
+	double *matrix /*= nullptr*/;
 	double _DeltaTime = 0;
 
 	/*MatrixGeneration*/
-	{
-		auto _TimeStart = MPI_Wtime();
-		matrix = new double[_OneBlockSize];
-		GenerateMatrix(matrix, rank, worldSize, _EquationCount, _OneBlockSize, status);
-		auto _TimeEnd = MPI_Wtime();
-		_DeltaTime = _TimeEnd - _TimeStart;
-	}
+	//{
+	auto _TimeStart = MPI_Wtime();
+	matrix = new double[_OneBlockSize];
+	GenerateMatrix(matrix, rank, worldSize, _EquationCount, _OneBlockSize, status);
+	auto _TimeEnd = MPI_Wtime();
+	_DeltaTime = _TimeEnd - _TimeStart;
+	//}
 	if (IsMain(rank)) {
 		printf(" GENERATION TIME %f\n", _DeltaTime);
 	}
@@ -312,8 +341,131 @@ int main(int argc, char **argv)
 	MPI_Barrier(MPI_COMM_WORLD);
 
 	/*Прямой ход-гоним к треугольному виду*/
+#if 0
+	DirectWay(matrix, worldSize, _ColumnsPerNode, _EquationCount, rank, _DeltaTime);
+
+	/*Обратный ход - гоним обратный метод гаусса*/
+
+	double *solution = nullptr;
+	double *row = nullptr;
+	RevertWay(row, solution, rank, _EquationCount, _ColumnsPerNode, worldSize);
+
+#else
+	   //Прямой ход метода Гаусса, приведение к треугольному виду.
+	MatrixMinor pair;
+	int activeNode;
+	for (activeNode = 1; activeNode < worldSize; ++activeNode)
 	{
-		DirectWay(matrix, worldSize, _ColumnsPerNode, _EquationCount, rank, _DeltaTime);
+		int column;
+		for (column = 0; column < _ColumnsPerNode; ++column)
+		{
+			if (rank == activeNode)
+			{
+				int mainRow = _ColumnsPerNode * (activeNode - 1) + column;
+				int mainIndex = GetIndexInLocalMatrix(_EquationCount, mainRow, column);
+				int upperBound = GetIndexInLocalMatrix(_EquationCount, _EquationCount, column);
+				int maxIndex = GetMaximalElementInBounds(matrix, mainIndex, upperBound);
+				pair.m_SelectedRow = mainRow;
+				pair.m_SeletedRowForSwappingWithMain = mainRow + maxIndex - mainIndex;
+			}
+
+			MPI_Bcast(&pair, 1, MPI_2INT, activeNode, MPI_COMM_WORLD);
+			if (pair.m_SelectedRow != pair.m_SeletedRowForSwappingWithMain)
+			{
+				SwapRows(_EquationCount, IsMain(rank) ? 1 : _ColumnsPerNode, pair.m_SelectedRow, pair.m_SeletedRowForSwappingWithMain, matrix);
+			}
+
+			//запоминаем главную строку
+			int mainRow = pair.m_SelectedRow;
+
+			double *multipliers = (double*)calloc((size_t)_EquationCount, sizeof(double));
+
+			if (rank == activeNode)
+			{
+				CalcMultipliersForConvertationOfMatrix(mainRow, column, _EquationCount, matrix, multipliers);
+			}
+
+			MPI_Bcast(multipliers, _EquationCount, MPI_DOUBLE, activeNode, MPI_COMM_WORLD);
+			MatrixModificateOnDirectWay(_EquationCount, IsMain(rank) ? 1 : _ColumnsPerNode, mainRow, matrix, multipliers);
+			free(multipliers);
+		}
+	}
+
+	double timeAfterDirectRound = MPI_Wtime();
+	if (IsMain(rank))
+	{
+		printf("Time for direct round = %f\n", timeAfterDirectRound - _DeltaTime);
+	}
+
+	//=====================================================
+	// ВОТ ТУТ Я НЕ УВЕРЕН
+
+	////Матрица треугольная, обратный ход метода Гаусса.
+	double *solution = NULL;
+	double *row;
+	if (IsMain(rank)) {
+		solution = (double*)calloc((size_t)_EquationCount, sizeof(double));
+		row = (double*)calloc((size_t)_EquationCount, sizeof(double));
+	}
+	else {
+		row = (double*)calloc((size_t)_ColumnsPerNode, sizeof(double));
+	}
+
+	int *dataMap = (int*)calloc((size_t)worldSize, sizeof(int));
+	int *receiveOffsets = (int*)calloc((size_t)worldSize, sizeof(int));
+	int nonMasterNode;
+
+	for (nonMasterNode = 1; nonMasterNode < worldSize; ++nonMasterNode)
+	{
+		dataMap[nonMasterNode] = _ColumnsPerNode;
+		receiveOffsets[nonMasterNode] = _ColumnsPerNode * (nonMasterNode - 1);
+	}
+
+	//=====================================================
+#endif
+
+	if (IsMain(rank)) {
+		printf(" RESULT CALCULATION ON NEXT STEP \n");
+	}
+
+	{
+		int equation;
+		for (equation = _EquationCount - 1; equation >= 0; --equation) {
+			if (!IsMain(rank)) {
+				int column;
+				for (column = 0; column < _ColumnsPerNode; ++column) {
+					row[column] = matrix[GetIndexInLocalMatrix(_EquationCount, equation, column)];
+				}
+			}
+			int i;
+			MPI_Gatherv(row, _ColumnsPerNode, MPI_DOUBLE, row, dataMap, receiveOffsets, MPI_DOUBLE, MAIN_RANK,
+				MPI_COMM_WORLD);
+			if (IsMain(rank)) {
+				solution[equation] = matrix[equation];
+				int solutionIndex;
+				for (solutionIndex = _EquationCount - 1; solutionIndex > equation; --solutionIndex) {
+					solution[equation] -= solution[solutionIndex] * row[solutionIndex];
+				}
+				solution[equation] = solution[equation] / row[equation];
+			}
+		}
+
+		double timeAfterReverseRound = MPI_Wtime();
+		if (IsMain(rank)) {
+			printf("Time to get solution = %f\n", timeAfterReverseRound - timeAfterDirectRound);
+		}
+		if (IsMain(rank)) {
+			printf("Result is : [");
+			for (equation = 0; equation < _EquationCount; ++equation) {
+				printf(" %f,", solution[equation]);
+			}
+			printf("]\n");
+			free(solution);
+		}
+		free(row);
+		free(dataMap);
+		free(receiveOffsets);
+		free(matrix);
 	}
 
 
