@@ -25,7 +25,6 @@ struct Compute
 	{
 		if (rank_proc == 0)
 		{
-
 			_PopulateMatrix();
 			printf("\ntime_started!");
 		}
@@ -102,7 +101,6 @@ private:
 		}
 	}
 
-
 	/*Вычисляем множители и вычитаем главную строку*на множитель*/
 	void _ExceptRaws(int iter_numb, double *glob_str)
 	{
@@ -123,7 +121,6 @@ private:
 			}
 		}
 	}
-
 
 	// Распределение исходных данных между процессами
 	void _TaskDistribution()
@@ -197,7 +194,6 @@ private:
 			MPI_Bcast(&m, 1, MPI_DOUBLE, 0, MPI_COMM_WORLD);
 		}
 
-
 		SAFE_DELETE_ARRAY(range_to_proc);
 		SAFE_DELETE_ARRAY(index_to_matr);
 	}
@@ -241,7 +237,6 @@ private:
 					NumsMainLinesIter[tmp_index] = i;
 					NumsMainLines[i] = _arrayCountOfProcesses[rank_proc] + VedIndex;
 					continue;
-
 				}
 				else
 				{
@@ -264,7 +259,6 @@ private:
 		};
 	}
 
-
 	/*Определяет ранг процесса, содержащего текущую ведущую строку, и номер этой строки на процессе*/
 	void Frp(int stringIndex, // номер строки, которая была ведущей на определеной итерации
 		int &iterationrank_proc, // процесс, на котором эта строка
@@ -278,7 +272,6 @@ private:
 		if (stringIndex >= _arrayCountOfProcesses[g_NumProc - 1])
 			iterationrank_proc = g_NumProc - 1;
 		IterationItervedindex = stringIndex - _arrayCountOfProcesses[iterationrank_proc];
-
 	}
 
 	/*Обратный ход*/
@@ -354,10 +347,6 @@ private:
 	int *NumsMainLinesIter;
 };
 
-
-
-
-
 //------------------------------------------------------------------------------
 
 int main(int argc, char* argv[])
@@ -367,7 +356,6 @@ int main(int argc, char* argv[])
 	MPI_Init(&argc, &argv);
 
 	Compute compute;
-
 
 	MPI_Comm_rank(MPI_COMM_WORLD, &compute.rank_proc);
 	MPI_Comm_size(MPI_COMM_WORLD, &compute.g_NumProc);
