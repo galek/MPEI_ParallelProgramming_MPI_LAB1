@@ -21,8 +21,6 @@ struct Compute
 		SAFE_DELETE_ARRAY(m_Result);
 	}
 
-	void DestroyThis() { delete this;  }
-
 	void Init()
 	{
 		if (rank_proc == 0)
@@ -45,12 +43,12 @@ struct Compute
 		m_CountOfStrings = tmp_num_str / (g_NumProc - rank_proc);
 
 		{
-			tmp_matrix = new double[m_CountOfStrings*size];
-			tmp_vector = new double[m_CountOfStrings];
-			tmp_res = new double[m_CountOfStrings];
+			tmp_matrix = new double[m_CountOfStrings*size];//выделяем память под строки матрицы
+			tmp_vector = new double[m_CountOfStrings]; //память под элементы столбца свободных членов
+			tmp_res = new double[m_CountOfStrings]; //память под элементы вектора результата
 
-			NumsMainLines = new int[size];
-			NumsMainLinesIter = new int[m_CountOfStrings];
+			NumsMainLines = new int[size]; //массив индексов ведущих строк системы на каждой итерации
+			NumsMainLinesIter = new int[m_CountOfStrings]; /* итерация, на которой соответствующая строка системы, расположенная на процессе, выбрана  ведущей */
 
 			_arrayCountOfProcesses = new int[g_NumProc];
 			range = new int[g_NumProc];
@@ -203,14 +201,8 @@ private:
 
 	void _ForwardGauss()
 	{
-		// индекс ведущей строки на конкретном процессе
-		int VedIndex;
-		//максимальный элемент+номер процесса, у которого он
-		struct
-		{
-			double max_val; int rank_proc;
-		} _localMax, _globalMax;
-
+		int VedIndex;   // индекс ведущей строки на конкретном процессе
+		struct { double max_val; int rank_proc; } loc_max, glob_max; //максимальный элемент+номер процесса, у которого он
 		double* glb_maxst = new double[size + 1]; //т.е. строка матрицы+значение вектора
 
 		for (int i = 0; i < size; i++) //главный цикл решения
@@ -224,22 +216,21 @@ private:
 				tmp_index = j;
 				if ((NumsMainLinesIter[j] == -1) && (max_val < fabs(tmp_matrix[i + size*j])))
 				{
-					// Ищем максимальную по модулю
 					max_val = fabs(tmp_matrix[i + size*j]);
 					VedIndex = j;
 				}
 			}
 
-			_localMax.max_val = max_val;
-			_localMax.rank_proc = rank_proc;
+			loc_max.max_val = max_val;
+			loc_max.rank_proc = rank_proc;
 
 			//каждый процесс рассылает свой локально максимальный элемент по всем столцам, все процесы принимают уже глобально максимальный элемент
-			MPI_Allreduce(&_localMax, &_globalMax, 1, MPI_DOUBLE_INT, MPI_MAXLOC, MPI_COMM_WORLD);
+			MPI_Allreduce(&loc_max, &glob_max, 1, MPI_DOUBLE_INT, MPI_MAXLOC, MPI_COMM_WORLD);
 
 			//Вычисление ведущей строки всей системы
-			if (rank_proc == _globalMax.rank_proc)
+			if (rank_proc == glob_max.rank_proc)
 			{
-				if (_globalMax.max_val == 0)
+				if (glob_max.max_val == 0)
 				{
 					status = 2;
 					MPI_Barrier(MPI_COMM_WORLD);
@@ -254,8 +245,8 @@ private:
 					NumsMainLines[i] = _arrayCountOfProcesses[rank_proc] + VedIndex;   //Вычисленный номер ведущей строки системы
 				}
 			}
-			MPI_Bcast(&NumsMainLines[i], 1, MPI_INT, _globalMax.rank_proc, MPI_COMM_WORLD);
-			if (rank_proc == _globalMax.rank_proc)
+			MPI_Bcast(&NumsMainLines[i], 1, MPI_INT, glob_max.rank_proc, MPI_COMM_WORLD);
+			if (rank_proc == glob_max.rank_proc)
 			{
 				for (int j = 0; j < size; j++) {
 					glb_maxst[j] = tmp_matrix[VedIndex*size + j];
@@ -263,7 +254,7 @@ private:
 				glb_maxst[size] = tmp_vector[VedIndex];
 			}
 			//Рассылка ведущей строки всем процессам
-			MPI_Bcast(glb_maxst, size + 1, MPI_DOUBLE, _globalMax.rank_proc, MPI_COMM_WORLD);
+			MPI_Bcast(glb_maxst, size + 1, MPI_DOUBLE, glob_max.rank_proc, MPI_COMM_WORLD);
 			//Исключение неизвестных в столбце с номером i
 			_ExceptRaws(i, glb_maxst);
 		};
@@ -397,10 +388,7 @@ int main(int argc, char* argv[])
 	}
 	if (compute.rank_proc == 0)
 	{
-		printf("\n FINISH!");
+		printf("\ntime_ended!");
 	}
-
-	compute.DestroyThis();
 	MPI_Finalize();
-
 }
