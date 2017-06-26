@@ -43,6 +43,25 @@ namespace Utils
 		return _row + _equationCount * _column;
 	}
 
+	int GetMaximalElementInBounds(double *_matrix, int _lowerBound, int _upperBound) 
+	{
+		double max = _matrix[_lowerBound];
+		int maxIndex = _lowerBound;
+
+		for (int i = lowerBound + 1; i < _upperBound; i++)
+		{
+			if (max < _matrix[i])
+			{
+				max = _matrix[i];
+				maxIndex = i;
+			}
+		}
+		return maxIndex;
+	}
+
+	void SwapRows()
+	{}
+
 	inline void CreateColumnBlock(int _numberOfEquations, int _worldSize, int _index, double *_block)
 	{
 		int columnCount = _numberOfEquations / (_worldSize - 1);
@@ -99,6 +118,7 @@ namespace Utils
 	}
 
 }
+
 
 
 namespace MatrixCompute
