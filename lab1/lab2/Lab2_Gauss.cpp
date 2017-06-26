@@ -132,10 +132,14 @@ private:
 		int *index_to_matr;
 		/*Count of elements of matrix what will sended to process*/
 		int *range_to_proc;
-		int numprocstr;
+
+		int _numProcStr;
+
 		int tmp_num_str;
+
 		int prev_sz;
 		int prev_indx;
+
 		int portion;
 
 		index_to_matr = new int[g_NumProc];
@@ -149,13 +153,14 @@ private:
 
 			prev_indx = (i == 0) ? 0 : index_to_matr[i - 1];
 
-			portion = (i == 0) ? 0 : numprocstr;             //число строк, отданных предыдущему процессу
+			//число строк, отданных предыдущему процессу
+			portion = (i == 0) ? 0 : _numProcStr;
 
 			tmp_num_str -= portion;
 
-			numprocstr = tmp_num_str / (g_NumProc - i);
+			_numProcStr = tmp_num_str / (g_NumProc - i);
 
-			range_to_proc[i] = numprocstr*size;
+			range_to_proc[i] = _numProcStr*size;
 
 			index_to_matr[i] = prev_indx + prev_sz;
 		}
