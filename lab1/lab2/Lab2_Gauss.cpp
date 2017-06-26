@@ -16,9 +16,9 @@ struct Compute
 {
 	~Compute()
 	{
-		SAFE_DELETE_ARRAY(matrix);
-		SAFE_DELETE_ARRAY(vector);
-		SAFE_DELETE_ARRAY(Result);
+		SAFE_DELETE_ARRAY(m_Matrix);
+		SAFE_DELETE_ARRAY(m_Vector);
+		SAFE_DELETE_ARRAY(m_Result);
 	}
 
 	void Init()
@@ -26,7 +26,7 @@ struct Compute
 		if (rank_proc == 0)
 		{
 			_PopulateMatrix();
-			printf("\ntime_started!");
+			printf("\n Timer started");
 		}
 
 		MPI_Bcast(&size, 1, MPI_INT, 0, MPI_COMM_WORLD);
@@ -69,35 +69,36 @@ struct Compute
 		_BackGauss();
 
 		//сбор данных, передача от всех одному (процессу c корнем 0)
-		MPI_Gatherv(tmp_res, range[rank_proc], MPI_DOUBLE, Result, range, _arrayCountOfProcesses, MPI_DOUBLE, 0, MPI_COMM_WORLD);
+		MPI_Gatherv(tmp_res, range[rank_proc], MPI_DOUBLE, m_Result, range, _arrayCountOfProcesses, MPI_DOUBLE, 0, MPI_COMM_WORLD);
 	}
 
 private:
 	/*Заполняем матрицу изначальными значениями*/
 	void _PopulateMatrix()
 	{
-		size = 7500;
+		/*!!Размер количества строк!!*/
+		size = 15000;
 		srand(p);
 
 		/**/
 		{
-			matrix = new double[size*size];
-			vector = new double[size];
-			Result = new double[size];
+			m_Matrix = new double[size*size];
+			m_Vector = new double[size];
+			m_Result = new double[size];
 		}
 
 		/*Заполняем случайными значениями*/
 		for (int i = 0; i < size*size; i++)
 		{
-			matrix[i] = rand();
+			m_Matrix[i] = rand();
 		}
 
 		/*Заполняем случайными значениями*/
 		for (int i = 0; i < size; i++)
 		{
-			vector[i] = rand();
+			m_Vector[i] = rand();
 			/*Результирующий вектор по 0*/
-			Result[i] = 0;
+			m_Result[i] = 0;
 		}
 	}
 
@@ -163,7 +164,7 @@ private:
 		}
 
 		// Разошлем матрицы каждому процессу
-		MPI_Scatterv(matrix, range_to_proc, index_to_matr, MPI_DOUBLE, tmp_matrix, range_to_proc[rank_proc], MPI_DOUBLE, 0, MPI_COMM_WORLD);
+		MPI_Scatterv(m_Matrix, range_to_proc, index_to_matr, MPI_DOUBLE, tmp_matrix, range_to_proc[rank_proc], MPI_DOUBLE, 0, MPI_COMM_WORLD);
 
 		//Разослали
 		tmp_num_str = size;
@@ -183,12 +184,12 @@ private:
 			/*
 			Рассылается:
 			-массив с количествами пересылаемых элеметов на каждый процесс
-			-массив с номерами элеметов, с которых надо начинать рассылку из vector
+			-массив с номерами элеметов, с которых надо начинать рассылку из m_Vector
 
 			Принимается:
 			Количество элементов на каждый процесс
 			*/
-			MPI_Scatterv(vector, range, _arrayCountOfProcesses, MPI_DOUBLE, tmp_vector, range[rank_proc], MPI_DOUBLE, 0, MPI_COMM_WORLD);
+			MPI_Scatterv(m_Vector, range, _arrayCountOfProcesses, MPI_DOUBLE, tmp_vector, range[rank_proc], MPI_DOUBLE, 0, MPI_COMM_WORLD);
 			status = 1;
 			MPI_Bcast(&status, 1, MPI_INT, 0, MPI_COMM_WORLD);
 			MPI_Bcast(&m, 1, MPI_DOUBLE, 0, MPI_COMM_WORLD);
@@ -331,7 +332,7 @@ public:
 
 private:
 	int m_CountOfStrings; //m_CountOfStrings-число строк исходной матрицы, хранящихся на конкретном процессе
-	double *matrix, *vector, *Result;
+	double *m_Matrix, *m_Vector, *m_Result;
 	/*Временные переменные*/
 	/*tmp_matrix, tmp_vector, tmp_res - куски матрицы, вектора b и вектора x на определенном процессе*/
 	double *tmp_matrix, *tmp_vector, *tmp_res, m = 0.0;
