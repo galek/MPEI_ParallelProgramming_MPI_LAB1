@@ -48,7 +48,7 @@ namespace Utils
 		double max = _matrix[_lowerBound];
 		int maxIndex = _lowerBound;
 
-		for (int i = lowerBound + 1; i < _upperBound; i++)
+		for (int i = _lowerBound + 1; i < _upperBound; i++)
 		{
 			if (max < _matrix[i])
 			{
@@ -59,8 +59,25 @@ namespace Utils
 		return maxIndex;
 	}
 
-	void SwapRows()
-	{}
+	void SwapRows(int _equationCount, int _columnsPerNode, int _firstRow, int _secondRow, double *_matrix) 
+	{
+		double buf;
+		int mainRowElementIndex;
+		int secondRowElementIndex;
+
+		//column
+		for (int j = 0; j < _columnsPerNode; j++) 
+		{
+			mainRowElementIndex = GetIndexInLocalMatrix(_equationCount, _firstRow, j);
+			secondRowElementIndex = GetIndexInLocalMatrix(_equationCount, _secondRow, j);
+
+			buf = _matrix[mainRowElementIndex];
+
+			_matrix[mainRowElementIndex] = _matrix[secondRowElementIndex];
+
+			_matrix[secondRowElementIndex] = buf;
+		}
+	}
 
 	inline void CreateColumnBlock(int _numberOfEquations, int _worldSize, int _index, double *_block)
 	{
