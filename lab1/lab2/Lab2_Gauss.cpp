@@ -43,7 +43,7 @@ namespace Utils
 		return _row + _equationCount * _column;
 	}
 
-	int GetMaximalElementInBounds(double *_matrix, int _lowerBound, int _upperBound) 
+	int GetMaximalElementInBounds(double *_matrix, int _lowerBound, int _upperBound)
 	{
 		double max = _matrix[_lowerBound];
 		int maxIndex = _lowerBound;
@@ -59,14 +59,14 @@ namespace Utils
 		return maxIndex;
 	}
 
-	void SwapRows(int _equationCount, int _columnsPerNode, int _firstRow, int _secondRow, double *_matrix) 
+	inline void SwapRows(int _equationCount, int _columnsPerNode, int _firstRow, int _secondRow, double *_matrix)
 	{
 		double buf;
 		int mainRowElementIndex;
 		int secondRowElementIndex;
 
 		//column
-		for (int j = 0; j < _columnsPerNode; j++) 
+		for (int j = 0; j < _columnsPerNode; j++)
 		{
 			mainRowElementIndex = GetIndexInLocalMatrix(_equationCount, _firstRow, j);
 			secondRowElementIndex = GetIndexInLocalMatrix(_equationCount, _secondRow, j);
@@ -100,6 +100,15 @@ namespace Utils
 					? 10 + normalizedRandom * 100
 					: normalizedRandom * 10;
 			}
+		}
+	}
+
+	void CalcMultipliersForConvertationOfMatrix(int _mainRow, int _mainColumn, int _equationCount, double *_matrix, double *_multipliers) {
+		int mainIndex = GetIndexInLocalMatrix(_equationCount, _mainRow, _mainColumn);
+		//row
+		for (int i = _mainRow + 1; i < _equationCount; i++)
+		{
+			_multipliers[i] = _matrix[GetIndexInLocalMatrix(_equationCount, i, _mainColumn)] / _matrix[mainIndex];
 		}
 	}
 
@@ -142,11 +151,26 @@ namespace MatrixCompute
 {
 	using namespace Utils;
 
-	struct MatrixState
+	struct MatrixMinor
 	{
 		int m_SelectedRow;
 		int m_SeletedRowForSwappingWithMain;
 	};
+
+	// Элементарные преобразования на прямом пути - вычитает из строк элементы главной строки*на множители
+	inline void MatrixModificateOnDirectWay(int _equationCount, int _columnsPerNode, int mainRow, double *matrix, double *multipliers) {
+		int row;
+		for (row = mainRow + 1; row < _equationCount; ++row) {
+			if (multipliers[row] != 0) {
+				int column;
+				for (column = 0; column < _columnsPerNode; ++column) {
+					int indexInMatrix = GetIndexInLocalMatrix(_equationCount, row, column);
+					int mainIndexInColumn = GetIndexInLocalMatrix(_equationCount, mainRow, column);
+					matrix[indexInMatrix] = matrix[indexInMatrix] - matrix[mainIndexInColumn] * multipliers[row];
+				}
+			}
+		}
+	}
 
 	inline void GenerateMatrix(double*_matrix, int _rank, int _worldSize, int _equationCount, int _oneBlockSize, MPI_Status&_status)
 	{
@@ -170,6 +194,56 @@ namespace MatrixCompute
 		else
 		{
 			MPI_Recv(_matrix, _oneBlockSize, MPI_DOUBLE, MAIN_RANK, ACTION_RANK, MPI_COMM_WORLD, &_status);
+		}
+	}
+
+	inline void DirectWay(double*_matrix, int _worldSize, int _columnsPerNode, int _equationCount, int _rank, double _timeAfterGenerating)
+	{
+		//Прямой ход метода Гаусса, приведение к треугольному виду.
+		MatrixMinor minor;
+
+		for (int activeNode = 1; activeNode < _worldSize; activeNode++)
+		{
+			//column
+			for (int j = 0; j < _columnsPerNode; j++)
+			{
+				if (_rank == activeNode)
+				{
+					int mainRow = _columnsPerNode * (activeNode - 1) + j;
+					int mainIndex = GetIndexInLocalMatrix(_equationCount, mainRow, j);
+					int upperBound = GetIndexInLocalMatrix(_equationCount, _equationCount, j);
+					int maxIndex = GetMaximalElementInBounds(_matrix, mainIndex, upperBound);
+
+					minor.m_SelectedRow = mainRow;
+					minor.m_SeletedRowForSwappingWithMain = mainRow + maxIndex - mainIndex;
+				}
+
+				MPI_Bcast(&minor, 1, MPI_2INT, activeNode, MPI_COMM_WORLD);
+				if (minor.m_SelectedRow != minor.m_SeletedRowForSwappingWithMain)
+				{
+					SwapRows(_equationCount, IsMain(_rank) ? 1 : _columnsPerNode, minor.m_SelectedRow, minor.m_SeletedRowForSwappingWithMain, _matrix);
+				}
+
+				//запоминаем главную строку
+				int mainRow = minor.m_SelectedRow;
+
+				double *multipliers = new double[_equationCount];
+
+				if (_rank == activeNode)
+				{
+					CalcMultipliersForConvertationOfMatrix(mainRow, j, _equationCount, _matrix, multipliers);
+				}
+
+				MPI_Bcast(multipliers, _equationCount, MPI_DOUBLE, activeNode, MPI_COMM_WORLD);
+				MatrixModificateOnDirectWay(_equationCount, IsMain(_rank) ? 1 : _columnsPerNode, mainRow, _matrix, multipliers);
+				free(multipliers);
+			}
+		}
+
+		double _EndTimeOfDirectRound = MPI_Wtime();
+		if (IsMain(_rank))
+		{
+			printf("Direct round time = %f\n", _EndTimeOfDirectRound - _timeAfterGenerating);
 		}
 	}
 
@@ -230,14 +304,17 @@ int main(int argc, char **argv)
 		auto _TimeEnd = MPI_Wtime();
 		_DeltaTime = _TimeEnd - _TimeStart;
 	}
-
-
 	if (IsMain(rank)) {
 		printf(" GENERATION TIME %f\n", _DeltaTime);
 	}
 
 	/*Синхронизируемся*/
 	MPI_Barrier(MPI_COMM_WORLD);
+
+	/*Прямой ход-гоним к треугольному виду*/
+	{
+		DirectWay(matrix, worldSize, _ColumnsPerNode, _EquationCount, rank, _DeltaTime);
+	}
 
 
 	MPI_Finalize();
